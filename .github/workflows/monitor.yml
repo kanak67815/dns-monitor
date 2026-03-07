@@ -23,3 +23,6 @@ jobs:
 
       - name: Run script
         run: python monitor.py
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
