@@ -22,7 +22,11 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run script
-        run: python monitor.py
+        run: |
+          echo "Workflow started"
+          date
+          python monitor.py
+          echo "Workflow finished"
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
