@@ -1,5 +1,6 @@
 import boto3
-import osres
+import os
+
 
 client = boto3.client("route53")
 
