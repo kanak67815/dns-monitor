@@ -6,16 +6,11 @@ import time
 from route53_delete import delete_dns_record
 
 domains = [
-    "app1.mps-tis.com",
-    "app2.mps-tis.com",
-    "app3.mps-tis.com",
-    "app4.mps-tis.com",
-    "app5.mps-tis.com",
-    "web1.mps-tis.com",
-    "web2.mps-tis.com",
-    "web3.mps-tis.com",
-    "web4.mps-tis.com",
-    "web5.mps-tis.com"
+    "info.cern.ch",
+    "webafs902.cern.ch",
+    "example.com",
+    "www.github.com",
+    "neverssl.com"
 ]
 
 log_file = open("monitor_log.txt", "a")
