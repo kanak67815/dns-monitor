@@ -4,15 +4,22 @@ from datetime import datetime
 from email_alert import send_email
 import time
 from route53_delete import delete_dns_record
+import boto3
+import os
 
+client = boto3.client("route53")
+HOSTED_ZONE_ID = os.getenv("HOSTED_ZONE_ID")
 
+domains = []
+paginator = client.get_paginator("list_resource_record_sets")
+for page in paginator.paginate(HostedZoneId=HOSTED_ZONE_ID):
+    for record in page["ResourceRecordSets"]:
+        if record["Type"] in ["A", "CNAME"]:
+            name = record["Name"].rstrip(".")
+            domains.append(name)
 
-domains = [
-    "example.com",
-    "github.com",
-    "neverssl.com",
-    "info.cern.ch"
-]
+# Remove duplicates if any
+domains = list(set(domains))
 log_file = open("monitor_log.txt", "a")
 
 working = []
