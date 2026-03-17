@@ -1,26 +1,32 @@
 import boto3
 import os
+import logging
 
 client = boto3.client("route53")
 
 HOSTED_ZONE_ID = os.getenv("HOSTED_ZONE_ID")
 
+logging.basicConfig(level=logging.INFO)
 
-def delete_dns_record(domain,record_type):
+
+def delete_dns_record(domain):
+    if not HOSTED_ZONE_ID:
+        logging.error("HOSTED_ZONE_ID not set in environment")
+        return False
 
     try:
-
         paginator = client.get_paginator("list_resource_record_sets")
 
         for page in paginator.paginate(HostedZoneId=HOSTED_ZONE_ID):
-
             for record in page["ResourceRecordSets"]:
 
                 name = record["Name"].rstrip(".")
+                record_type = record["Type"]
 
-                if name == domain and record["Type"] in ["A", "CNAME"]:
+                # Only allow safe deletions
+                if name == domain and record_type in ["A", "CNAME"]:
 
-                    print(f"Deleting DNS record for {domain}...")
+                    logging.info(f"Deleting {record_type} record for {domain}")
 
                     client.change_resource_record_sets(
                         HostedZoneId=HOSTED_ZONE_ID,
@@ -34,12 +40,12 @@ def delete_dns_record(domain,record_type):
                         }
                     )
 
-                    print(f"DNS record for {domain} deleted successfully.")
+                    logging.info(f"Successfully deleted {domain}")
                     return True
 
-        print(f"No matching DNS record found for {domain}.")
+        logging.warning(f"No matching DNS record found for {domain}")
         return False
 
     except Exception as e:
-        print(f"Error deleting DNS record for {domain}: {e}")
+        logging.error(f"Error deleting DNS record for {domain}: {e}")
         return False

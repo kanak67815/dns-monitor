@@ -2,119 +2,135 @@ from dns_check import dns_check
 from http_check import http_check
 from route53_fetch import get_route_53_domains
 from email_alert import send_email
-from route53_delete import delete_dns_record
 from port_check import check_port
 from retry_logic import retry
 from crawler import crawl_domain
 from approval_system import create_review_list
-from dotenv import load_dotenv
 
+import logging
+import json
 import time
+from concurrent.futures import ThreadPoolExecutor
 
-load_dotenv()
+# -------------------------
+# CONFIG
+# -------------------------
+MAX_WORKERS = 10
 
-# SAFETY SWITCH
-ENABLE_DELETE = False
+logging.basicConfig(
+    filename="monitor.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
+# -------------------------
+# DOMAIN CHECK FUNCTION
+# -------------------------
+def check_domain(domain):
+    logging.info(f"Checking {domain}")
+
+    result = {
+        "domain": domain,
+        "dns": {},
+        "port": {},
+        "http": {},
+        "crawl": {}
+    }
+
+    # DNS
+    dns_result = retry(dns_check, domain)
+    result["dns"] = dns_result
+
+    if not dns_result["status"]:
+        logging.error(f"DNS failed for {domain}")
+        result["final_status"] = "failed"
+        return result
+
+    # PORT
+    port_result = check_port(domain)
+    result["port"] = port_result
+
+    if not port_result["status"]:
+        logging.error(f"Port failed for {domain}")
+        result["final_status"] = "failed"
+        return result
+
+    # HTTP (non-blocking warning)
+    http_result = http_check(domain)
+    result["http"] = http_result
+
+    if not http_result["status"]:
+        logging.warning(f"HTTP issue for {domain}: {http_result}")
+
+    # CRAWLER (non-blocking warning)
+    crawl_result = crawl_domain(domain)
+    result["crawl"] = crawl_result
+
+    if not crawl_result["status"]:
+        logging.warning(f"Crawler issue for {domain}: {crawl_result}")
+
+    result["final_status"] = "working"
+    return result
+
+
+# -------------------------
+# MAIN MONITOR
+# -------------------------
 def run_monitor():
     domains = get_route_53_domains()
-
-    print(f"\nTotal domains fetched: {len(domains)}\n")
-
-    working = []
-    failed = []
+    logging.info(f"Total domains fetched: {len(domains)}")
 
     # -------------------------
-    # INITIAL CHECK
+    # PARALLEL EXECUTION
     # -------------------------
-    for domain in domains:
-        print(f"\nChecking: {domain}")
-
-        # DNS
-        dns_result = retry(dns_check, domain)
-        if not dns_result["status"]:
-            print(f" DNS FAILED: {dns_result}")
-            failed.append(domain)
-            continue
-
-        print(f" DNS OK: {dns_result}")
-
-        # PORT
-        port_result = check_port(domain)
-        if not port_result["status"]:
-            print(f" PORT FAILED: {port_result}")
-            failed.append(domain)
-            continue
-
-        print(f" PORT OK: {port_result}")
-
-        # HTTP
-        http_result = http_check(domain)
-        if not http_result["status"]:
-            print(f" HTTP WARNING (ignored): {http_result}")
-        else:
-            print(f" HTTP OK: {http_result}")
-
-        # CRAWLER
-        crawl_result = crawl_domain(domain)
-        if not crawl_result["status"]:
-            print(f" CRAWLER WARNING: {crawl_result}")
-        else:
-            print(f" CRAWLER OK: {crawl_result}")
-
-        # If DNS + PORT passed → working
-        working.append(domain)
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        results = list(executor.map(check_domain, domains))
 
     # -------------------------
-    # SUMMARY
+    # SAVE RESULTS
     # -------------------------
-    print("\nWORKING DOMAINS:")
-    for d in working:
-        print(d)
+    with open("monitor_log.json", "w") as f:
+        json.dump(results, f, indent=2)
 
-    print("\nFAILED DOMAINS:")
-    for d in failed:
-        print(d)
+    # -------------------------
+    # SEPARATE STATUS
+    # -------------------------
+    working = [r["domain"] for r in results if r["final_status"] == "working"]
+    failed = [r["domain"] for r in results if r["final_status"] == "failed"]
+
+    logging.info(f"Working domains: {len(working)}")
+    logging.info(f"Failed domains: {len(failed)}")
 
     # -------------------------
     # ALERT + RECHECK
     # -------------------------
     if failed:
-
-        print("\nSending Email Alert...")
+        logging.warning(f"Sending alert for failed domains: {failed}")
         send_email(failed)
 
-        print("\nWaiting for 10 minutes before next check...")
+        logging.info("Waiting 10 minutes before recheck...")
         time.sleep(600)
 
         still_failed = []
-
-        print("\nRECHECKING FAILED DOMAINS:")
 
         for domain in failed:
             dns_result = retry(dns_check, domain)
 
             if not dns_result["status"]:
-                print(f"{domain} still DNS FAILED")
                 still_failed.append(domain)
                 continue
 
             port_result = check_port(domain)
 
             if not port_result["status"]:
-                print(f"{domain} still PORT FAILED")
                 still_failed.append(domain)
-            else:
-                print(f"{domain} is now healthy")
 
-        print("\nStill failed domains:")
-        print(still_failed)
+        logging.warning(f"Still failed domains: {still_failed}")
 
         # -------------------------
-        # APPROVAL SYSTEM (instead of delete)
+        # HUMAN APPROVAL FLOW
         # -------------------------
         if still_failed:
-            print("\nCreating review list for manual approval...")
             create_review_list(still_failed)
 
 

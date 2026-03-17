@@ -2,26 +2,38 @@ name: DNS Monitor
 
 on:
   schedule:
-    - cron: "*/1 * * * *"
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 jobs:
   run-monitor:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Restore state
+      - name: Restore previous state
+        uses: actions/cache@v3
+        with:
+          path: |
+            monitor_log.json
+            review_list.json
+          key: dns-monitor-${{ runner.os }}
+          restore-keys: dns-monitor-
+
+      # Setup Python
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
+      # AWS Auth
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -29,13 +41,35 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Run monitoring script
-        run: |
-          echo "Workflow started"
-          date
-          python monitor.py
-          echo "Workflow finished"
+      # Run monitor
+      - name: Run monitoring
+        run: python monitor.py
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           HOSTED_ZONE_ID: ${{ secrets.HOSTED_ZONE_ID }}
+          ENABLE_DELETE: "false"
+
+      # Generate review list
+      - name: Generate review list
+        run: python generate_review_list.py
+
+      # Run delete confirmation (safe - dry run)
+      - name: Run delete confirmation
+        run: python delete_confirme.py
+        env:
+          ENABLE_DELETE: "false"
+
+      # Save state
+      - name: Save state
+        uses: actions/cache@v3
+        with:
+          path: |
+            monitor_log.json
+            review_list.json
+          key: dns-monitor-${{ runner.os }}-${{ github.run_id }}
+
+      # Failure alert
+      - name: Notify on failure
+        if: failure()
+        run: echo "Workflow failed!"
