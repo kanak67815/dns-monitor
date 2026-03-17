@@ -1,159 +1,104 @@
-import dns.resolver
-import requests
-from datetime import datetime
-from email_alert import send_email
-import time
+from dns_check import dns_check
+from http_check import http_check
+from route53_fetch import get_route53_domains
 from route53_delete import delete_dns_record
-import boto3
+from email_alert import send_email
 import os
+
+import time
+
+HOSTED_ZONE_ID = os.getenv("HOSTED_ZONE_ID")
 
 client = boto3.client("route53")
 HOSTED_ZONE_ID = os.getenv("HOSTED_ZONE_ID")
 
-domains = []
-paginator = client.get_paginator("list_resource_record_sets")
-for page in paginator.paginate(HostedZoneId=HOSTED_ZONE_ID):
-    for record in page["ResourceRecordSets"]:
-        if record["Type"] in ["A", "CNAME"]:
-            name = record["Name"].rstrip(".")
-            domains.append(name)
+def evaluate_domain(domain):
+    """
+    Decide if domain is healthy or suspicious
+    """
 
-# Remove duplicates if any
-domains = list(set(domains))
-log_file = open("monitor_log.txt", "a")
+    dns_result = dns_check(domain)
+    http_result = http_check(domain)
 
-working = []
-failed = []
+    print(f"\nChecking: {domain}")
+    print("DNS:", dns_result)
+    print("HTTP:", http_result)
 
-for domain in domains:
+    # 🚨 CASE 1: Domain does not exist
+    if not dns_result["status"] and dns_result.get("reason") == "NXDOMAIN":
+        return "DELETE"
 
-    print("\nChecking:", domain)
-    log_file.write(f"\n[{datetime.now()}] Checking {domain}\n")
+    # ⚠️ CASE 2: DNS OK but HTTP failed
+    if dns_result["status"] and not http_result["status"]:
+        return "SUSPICIOUS"
 
-    # DNS CHECK
-    try:
-        result = dns.resolver.resolve(domain)
-        ip = result[0].to_text()
+    # ⚠️ CASE 3: Everything failed
+    if not dns_result["status"] and not http_result["status"]:
+        return "SUSPICIOUS"
 
-        print("DNS OK:", ip)
-        log_file.write(f"DNS OK: {ip}\n")
-
-    except Exception as e:
-        print("DNS FAILED:", e)
-        log_file.write("DNS FAILED\n")
-
-        failed.append(domain)
-        continue
+    # ✅ CASE 4: Working
+    return "HEALTHY"
 
 
-    # HTTP CHECK
-    try:
+def monitor():
 
-        headers = {"User-Agent": "Mozilla/5.0"}
+    domains_data = get_route53_domains(HOSTED_ZONE_ID)
 
-        response = requests.get(
-            "http://" + domain,
-            timeout=5,
-            allow_redirects=True,
-            headers=headers
-        )
+    healthy = []
+    suspicious = []
+    to_delete = []
 
-        print("HTTP STATUS ->", response.status_code)
-        log_file.write(f"HTTP STATUS -> {response.status_code}\n")
+    # 🔍 First Pass
+    for item in domains_data:
+        domain = item["domain"]
 
-        if 200 <= response.status_code < 400:
-            working.append(domain)
+        status = evaluate_domain(domain)
 
-        else:
-            print("HTTP FAILED")
-            log_file.write("HTTP FAILED\n")
+        if status == "HEALTHY":
+            healthy.append(domain)
 
-            failed.append(domain)
+        elif status == "SUSPICIOUS":
+            suspicious.append(domain)
 
-    except Exception as e:
-        print("HTTP FAILED:", e)
-        log_file.write("HTTP FAILED\n")
+        elif status == "DELETE":
+            to_delete.append(domain)
 
-        failed.append(domain)
-print("\nWORKING DOMAINS:")
-for d in working:
-    print(d)
+    # 📧 Alert suspicious domains
+    if suspicious:
+        print("\nSending alert for suspicious domains...")
+        send_email(suspicious)
 
-
-print("\nFAILED DOMAINS:")
-for d in failed:
-    print(d)
-
-log_file.write("\n===================\n")
-log_file.write("WORKING DOMAINS:\n")
-
-for d in working:
-    log_file.write(d + "\n")
-
-
-log_file.write("\nFAILED DOMAINS:\n")
-
-for d in failed:
-    log_file.write(d + "\n")
-
-log_file.close()
-
-if failed:
-
-    print("\nSending Email Alert...")
-    send_email(failed)
-
-    print("\nWaiting for 10 minutes before next check...")
+    # ⏳ WAIT before recheck
+    print("\nWaiting 10 minutes before recheck...")
     time.sleep(600)
 
-    still_failed = []
+    still_suspicious = []
 
-    print("\nRECHECKING FAILED DOMAINS:")
+    # 🔁 Second Pass (Recheck)
+    for domain in suspicious:
+        status = evaluate_domain(domain)
 
-    for domain in failed:
+        if status != "HEALTHY":
+            still_suspicious.append(domain)
 
-        try:
+    print("\nStill suspicious:", still_suspicious)
 
-            dns.resolver.resolve(domain)
+    # 🚨 FINAL DELETE DECISION
+    final_delete = to_delete + still_suspicious
 
-            headers = {"User-Agent": "Mozilla/5.0"}
+    if final_delete:
+        print("\nDomains marked for deletion:")
+        print(final_delete)
 
-            r = requests.get(
-                "http://" + domain,
-                timeout=5,
-                allow_redirects=True,
-                headers=headers
-            )
+        # ⚠️ Ideally require manual approval here
+        confirm = input("Type YES to delete: ")
 
-            if 200 <= r.status_code < 400:
-                print(f"{domain} is now working.")
-
-            else:
-                print(f"{domain} is still failing.")
-                still_failed.append(domain)
-
-        except Exception as e:
-            print(f"{domain} ERROR:", e)
-            still_failed.append(domain)
+        if confirm == "YES":
+            for domain in final_delete:
+                delete_dns_record(domain)
+        else:
+            print("Deletion cancelled.")
 
 
-
-    print("\nStill failed domains:")
-    print(still_failed)
-
-
-
-    if still_failed:
-        print("\nSummary before deletion:")
-        print("WORKING DOMAINS:")
-        for d in working:
-            print(d)
-        print("\nFAILED DOMAINS:")
-        for d in still_failed:
-            print(d)
-        input("\nPress Enter to continue with deletion, or Ctrl+C to abort...")
-
-        print("\nDeleting DNS records from Route53...")
-
-        for domain in still_failed:
-            delete_dns_record(domain)
+if __name__ == "__main__":
+    monitor()

@@ -6,7 +6,7 @@ client = boto3.client("route53")
 HOSTED_ZONE_ID = os.getenv("HOSTED_ZONE_ID")
 
 
-def delete_dns_record(domain):
+def delete_dns_record(domain,record_type):
 
     try:
 
