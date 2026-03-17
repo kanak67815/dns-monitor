@@ -24,9 +24,13 @@ def run_monitor():
     working = []
     failed = []
 
+<<<<<<< HEAD
     # -------------------------
     # INITIAL CHECK
     # -------------------------
+=======
+   
+>>>>>>> 787d94f (generate list)
     for domain in domains:
         print(f"\nChecking: {domain}")
 
@@ -110,9 +114,12 @@ def run_monitor():
         print("\nStill failed domains:")
         print(still_failed)
 
+<<<<<<< HEAD
         # -------------------------
         # APPROVAL SYSTEM (instead of delete)
         # -------------------------
+=======
+>>>>>>> 787d94f (generate list)
         if still_failed:
             print("\nCreating review list for manual approval...")
             create_review_list(still_failed)
