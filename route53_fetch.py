@@ -1,5 +1,7 @@
 import boto3
 import os
+from dotenv import load_dotenv
+load_dotenv()
 client=boto3.client("route53")
 HOSTED_ZONE_ID=os.getenv("HOSTED_ZONE_ID")
 
