@@ -3,7 +3,7 @@ from http_check import http_check
 from route53_fetch import get_route_53_domains
 from email_alert import send_email
 from route53_delete import delete_dns_record
-from check_port import check_port
+from port_check import check_port
 from retry_logic import retry
 from crawler import crawl_domain
 from approval_system import create_review_list
@@ -24,13 +24,9 @@ def run_monitor():
     working = []
     failed = []
 
-<<<<<<< HEAD
     # -------------------------
     # INITIAL CHECK
     # -------------------------
-=======
-   
->>>>>>> 787d94f (generate list)
     for domain in domains:
         print(f"\nChecking: {domain}")
 
@@ -114,12 +110,9 @@ def run_monitor():
         print("\nStill failed domains:")
         print(still_failed)
 
-<<<<<<< HEAD
         # -------------------------
         # APPROVAL SYSTEM (instead of delete)
         # -------------------------
-=======
->>>>>>> 787d94f (generate list)
         if still_failed:
             print("\nCreating review list for manual approval...")
             create_review_list(still_failed)
