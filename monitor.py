@@ -3,7 +3,7 @@ from http_check import http_check
 from route53_fetch import get_route_53_domains
 from email_alert import send_email
 from route53_delete import delete_dns_record
-from port_check import check_port
+from check_port import check_port
 from retry_logic import retry
 from crawler import crawl_domain
 from approval_system import create_review_list
