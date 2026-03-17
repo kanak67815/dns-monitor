@@ -144,6 +144,14 @@ if failed:
 
 
     if still_failed:
+        print("\nSummary before deletion:")
+        print("WORKING DOMAINS:")
+        for d in working:
+            print(d)
+        print("\nFAILED DOMAINS:")
+        for d in still_failed:
+            print(d)
+        input("\nPress Enter to continue with deletion, or Ctrl+C to abort...")
 
         print("\nDeleting DNS records from Route53...")
 
