@@ -56,7 +56,7 @@ jobs:
 
       # Run delete confirmation (safe - dry run)
       - name: Run delete confirmation
-        run: python delete_confirme.py
+        run: python delete_confirmed.py
         env:
           ENABLE_DELETE: "false"
 
