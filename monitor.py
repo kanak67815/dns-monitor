@@ -5,12 +5,14 @@ from email_alert import send_email
 from route53_delete import delete_dns_record
 from port_check import check_port
 from retry_logic import retry
+from crawler import crawl_domain
+from approval_system import create_review_list
 from dotenv import load_dotenv
-load_dotenv()
+
 import time
-import os
-print("HOSTED_ZONE_ID:", os.getenv("HOSTED_ZONE_ID"))
-print("EMAIL_USER:", os.getenv("EMAIL_USER"))
+
+load_dotenv()
+
 # SAFETY SWITCH
 ENABLE_DELETE = False
 
@@ -28,8 +30,8 @@ def run_monitor():
     for domain in domains:
         print(f"\nChecking: {domain}")
 
+        # DNS
         dns_result = retry(dns_check, domain)
-
         if not dns_result["status"]:
             print(f" DNS FAILED: {dns_result}")
             failed.append(domain)
@@ -37,9 +39,8 @@ def run_monitor():
 
         print(f" DNS OK: {dns_result}")
 
-        # ✅ PORT CHECK NEXT
+        # PORT
         port_result = check_port(domain)
-
         if not port_result["status"]:
             print(f" PORT FAILED: {port_result}")
             failed.append(domain)
@@ -47,16 +48,22 @@ def run_monitor():
 
         print(f" PORT OK: {port_result}")
 
-        # ✅ Mark as working (DNS + PORT passed)
-        working.append(domain)
-
-        # ✅ HTTP CHECK (ONLY FOR LOGGING)
+        # HTTP
         http_result = http_check(domain)
-
         if not http_result["status"]:
             print(f" HTTP WARNING (ignored): {http_result}")
         else:
             print(f" HTTP OK: {http_result}")
+
+        # CRAWLER
+        crawl_result = crawl_domain(domain)
+        if not crawl_result["status"]:
+            print(f" CRAWLER WARNING: {crawl_result}")
+        else:
+            print(f" CRAWLER OK: {crawl_result}")
+
+        # If DNS + PORT passed → working
+        working.append(domain)
 
     # -------------------------
     # SUMMARY
@@ -85,7 +92,6 @@ def run_monitor():
         print("\nRECHECKING FAILED DOMAINS:")
 
         for domain in failed:
-            # DNS recheck
             dns_result = retry(dns_check, domain)
 
             if not dns_result["status"]:
@@ -93,7 +99,6 @@ def run_monitor():
                 still_failed.append(domain)
                 continue
 
-            # PORT recheck
             port_result = check_port(domain)
 
             if not port_result["status"]:
@@ -106,27 +111,11 @@ def run_monitor():
         print(still_failed)
 
         # -------------------------
-        # DELETE (SAFE)
+        # APPROVAL SYSTEM (instead of delete)
         # -------------------------
         if still_failed:
-
-            print("\nSummary before deletion:")
-            print("WORKING DOMAINS:", working)
-            print("FAILED DOMAINS:", still_failed)
-
-            if not ENABLE_DELETE:
-                print("\n🚫 Deletion skipped (ENABLE_DELETE=False)")
-            else:
-                print("\nDeleting DNS records...")
-
-                for domain in still_failed:
-
-                    # EXTRA SAFETY CHECK
-                    if not domain.endswith("mps-tis.com"):
-                        print(f"Skipping unsafe domain: {domain}")
-                        continue
-
-                    delete_dns_record(domain)
+            print("\nCreating review list for manual approval...")
+            create_review_list(still_failed)
 
 
 if __name__ == "__main__":
