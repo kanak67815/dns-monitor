@@ -11,20 +11,15 @@ jobs:
     timeout-minutes: 10
 
     steps:
+      # -------------------------
+      # Checkout Repo
+      # -------------------------
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Restore state
-      - name: Restore previous state
-        uses: actions/cache@v3
-        with:
-          path: |
-            monitor_log.json
-            review_list.json
-          key: dns-monitor-${{ runner.os }}
-          restore-keys: dns-monitor-
-
+      # -------------------------
       # Setup Python
+      # -------------------------
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -33,7 +28,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # -------------------------
       # AWS Auth
+      # -------------------------
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -41,7 +38,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # Run monitor
+      # -------------------------
+      # Run Monitoring
+      # -------------------------
       - name: Run monitoring
         run: python monitor.py
         env:
@@ -50,26 +49,48 @@ jobs:
           HOSTED_ZONE_ID: ${{ secrets.HOSTED_ZONE_ID }}
           ENABLE_DELETE: "false"
 
-      # Generate review list
+      # -------------------------
+      # Generate Review List + Email Alert
+      # -------------------------
       - name: Generate review list
         run: python generate_review_list.py
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
 
-      # Run delete confirmation (safe - dry run)
+      # -------------------------
+      # Delete Confirmed Domains (SAFE MODE)
+      # -------------------------
       - name: Run delete confirmation
         run: python delete_confirmed.py
         env:
           ENABLE_DELETE: "false"
+        continue-on-error: true
 
-      # Save state
-      - name: Save state
-        uses: actions/cache@v3
-        with:
-          path: |
-            monitor_log.json
-            review_list.json
-          key: dns-monitor-${{ runner.os }}-${{ github.run_id }}
+      # -------------------------
+      # Debug (optional but useful)
+      # -------------------------
+      - name: Debug output
+        run: |
+          echo "---- monitor_log.json ----"
+          cat monitor_log.json || echo "missing"
+          echo "---- review_list.json ----"
+          cat review_list.json || echo "missing"
 
-      # Failure alert
+      # -------------------------
+      # Persist State (BEST METHOD)
+      # -------------------------
+      - name: Commit updated state
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add monitor_log.json review_list.json
+          git commit -m "Update monitoring state" || echo "No changes"
+          git push
+
+      # -------------------------
+      # Failure Notification
+      # -------------------------
       - name: Notify on failure
         if: failure()
         run: echo "Workflow failed!"
