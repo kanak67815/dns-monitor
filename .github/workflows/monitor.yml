@@ -5,44 +5,47 @@ on:
     - cron: "*/15 * * * *"
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   run-monitor:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15   # increased safety buffer
 
     steps:
       # -------------------------
-      # Checkout Repo
+      # Checkout Repo (UPDATED)
       # -------------------------
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # -------------------------
-      # Setup Python
+      # Setup Python (UPDATED)
       # -------------------------
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.11"
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
       # -------------------------
-      # AWS Auth
+      # AWS Auth (UPDATED)
       # -------------------------
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
       # -------------------------
-      # Run Monitoring
+      # Run Monitoring (ADD TIMEOUT SAFETY)
       # -------------------------
       - name: Run monitoring
-        run: python monitor.py
+        run: timeout 300 python monitor.py   # max 5 min
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
@@ -50,25 +53,25 @@ jobs:
           ENABLE_DELETE: "false"
 
       # -------------------------
-      # Generate Review List + Email Alert
+      # Generate Review List
       # -------------------------
       - name: Generate review list
-        run: python generate_review_list.py
+        run: timeout 120 python generate_review_list.py
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
 
       # -------------------------
-      # Delete Confirmed Domains (SAFE MODE)
+      # Delete Confirmed Domains
       # -------------------------
       - name: Run delete confirmation
-        run: python delete_confirmed.py
+        run: timeout 120 python delete_confirmed.py
         env:
           ENABLE_DELETE: "false"
         continue-on-error: true
 
       # -------------------------
-      # Debug (optional but useful)
+      # Debug Output
       # -------------------------
       - name: Debug output
         run: |
@@ -78,12 +81,13 @@ jobs:
           cat review_list.json || echo "missing"
 
       # -------------------------
-      # Persist State (BEST METHOD)
+      # Commit State (SAFE PUSH)
       # -------------------------
       - name: Commit updated state
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
+          git pull --rebase
           git add monitor_log.json review_list.json
           git commit -m "Update monitoring state" || echo "No changes"
           git push
