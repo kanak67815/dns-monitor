@@ -17,20 +17,19 @@
       }
     },
     "http": {
-      "status": false,
-      "url": null,
-      "status_code": null,
-      "error": "SSL Error: HTTPSConnectionPool(host='a1.mps-tis.com', port=443): Max retries exceeded with url: / (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'a1.mps-tis.com'. (_ssl.c:1016)\")))"
+      "status": true,
+      "warning": "Forbidden (possible bot block)",
+      "url": "https://a1.mps-tis.com",
+      "status_code": 403
     },
     "crawl": {
       "status": false,
       "reason": "HTTP 409"
     },
     "failure_reason": [
-      "HTTP",
       "CRAWL"
     ],
-    "final_status": "failed"
+    "final_status": "working"
   },
   {
     "domain": "app2.mps-tis.com",
@@ -53,7 +52,7 @@
       "status": false,
       "url": null,
       "status_code": null,
-      "error": "SSL Error: HTTPSConnectionPool(host='app2.mps-tis.com', port=443): Max retries exceeded with url: / (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'app2.mps-tis.com'. (_ssl.c:1016)\")))"
+      "error": "HTTP check failed after retries"
     },
     "crawl": {
       "status": false,
