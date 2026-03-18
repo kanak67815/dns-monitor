@@ -1,5 +1,8 @@
 import requests
 import time
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def http_check(domain, retries=3, timeout=5):
 
@@ -21,7 +24,8 @@ def http_check(domain, retries=3, timeout=5):
                     url,
                     timeout=timeout,
                     allow_redirects=True,
-                    headers=headers
+                    headers=headers,
+                    verify=False   # ✅ IMPORTANT FIX
                 )
 
                 if response.status_code >= 400:
@@ -29,10 +33,11 @@ def http_check(domain, retries=3, timeout=5):
                         url,
                         timeout=timeout,
                         allow_redirects=True,
-                        headers=headers
+                        headers=headers,
+                        verify=False   # ✅ IMPORTANT FIX
                     )
 
-                
+                # ✅ SUCCESS CASE
                 if 200 <= response.status_code < 400:
                     return {
                         "status": True,
@@ -40,7 +45,7 @@ def http_check(domain, retries=3, timeout=5):
                         "status_code": response.status_code
                     }
 
-               
+                # 🟡 BOT BLOCK
                 elif response.status_code == 403:
                     return {
                         "status": True,
@@ -49,7 +54,7 @@ def http_check(domain, retries=3, timeout=5):
                         "status_code": 403
                     }
 
-               
+                # 🟡 SERVER ERROR BUT ALIVE
                 elif response.status_code >= 500:
                     return {
                         "status": True,
@@ -58,8 +63,14 @@ def http_check(domain, retries=3, timeout=5):
                         "status_code": response.status_code
                     }
 
+            # 🔥 FIXED SSL HANDLING
             except requests.exceptions.SSLError as e:
-                last_error = f"SSL Error: {str(e)}"
+                return {
+                    "status": True,   # ✅ KEY CHANGE
+                    "warning": "SSL issue",
+                    "error": str(e),
+                    "url": url
+                }
 
             except requests.exceptions.Timeout:
                 last_error = "Timeout"
