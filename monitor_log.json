@@ -63,5 +63,128 @@
       "CRAWL"
     ],
     "final_status": "failed"
+  },
+  {
+    "domain": "cloudflare-test.mps-tis.com",
+    "dns": {
+      "status": false,
+      "reason": "NXDOMAIN"
+    },
+    "port": {},
+    "http": {},
+    "crawl": {},
+    "failure_reason": [
+      "DNS"
+    ],
+    "final_status": "failed"
+  },
+  {
+    "domain": "dead-server.mps-tis.com",
+    "dns": {
+      "status": true,
+      "type": "A",
+      "value": [
+        "10.255.255.1"
+      ],
+      "resolver": "8.8.8.8"
+    },
+    "port": {
+      "status": false,
+      "ports": {
+        "80": "closed",
+        "443": "closed"
+      }
+    },
+    "http": {},
+    "crawl": {},
+    "failure_reason": [
+      "PORT"
+    ],
+    "final_status": "failed"
+  },
+  {
+    "domain": "dns-only.mps-tis.com",
+    "dns": {
+      "status": false,
+      "reason": "NXDOMAIN"
+    },
+    "port": {},
+    "http": {},
+    "crawl": {},
+    "failure_reason": [
+      "DNS"
+    ],
+    "final_status": "failed"
+  },
+  {
+    "domain": "google-test.mps-tis.com",
+    "dns": {
+      "status": true,
+      "type": "A",
+      "value": [
+        "142.250.183.206"
+      ],
+      "resolver": "8.8.8.8"
+    },
+    "port": {
+      "status": true,
+      "ports": {
+        "80": "open",
+        "443": "open"
+      }
+    },
+    "http": {
+      "status": false,
+      "url": null,
+      "status_code": null,
+      "error": "HTTP check failed after retries"
+    },
+    "crawl": {
+      "status": false,
+      "reason": "HTTP 404"
+    },
+    "failure_reason": [
+      "HTTP",
+      "CRAWL"
+    ],
+    "final_status": "failed"
+  },
+  {
+    "domain": "local-test.mps-tis.com",
+    "dns": {
+      "status": true,
+      "type": "A",
+      "value": [
+        "127.0.0.1"
+      ],
+      "resolver": "8.8.8.8"
+    },
+    "port": {
+      "status": false,
+      "ports": {
+        "80": "closed",
+        "443": "closed"
+      }
+    },
+    "http": {},
+    "crawl": {},
+    "failure_reason": [
+      "PORT"
+    ],
+    "final_status": "failed"
+  },
+  {
+    "domain": "stable.mps-tis.com",
+    "dns": {
+      "status": false,
+      "reason": "NXDOMAIN"
+    },
+    "port": {},
+    "http": {},
+    "crawl": {},
+    "failure_reason": [
+      "DNS"
+    ],
+    "final_status": "failed"
   }
 ]

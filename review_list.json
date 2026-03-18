@@ -8,5 +8,35 @@
     "domain": "app2.mps-tis.com",
     "approve": null,
     "flagged_on": "2026-03-18T05:03:49.587455"
+  },
+  {
+    "domain": "cloudflare-test.mps-tis.com",
+    "approve": null,
+    "flagged_on": "2026-03-18T08:05:37.137944"
+  },
+  {
+    "domain": "dead-server.mps-tis.com",
+    "approve": null,
+    "flagged_on": "2026-03-18T08:05:37.137951"
+  },
+  {
+    "domain": "dns-only.mps-tis.com",
+    "approve": null,
+    "flagged_on": "2026-03-18T08:05:37.137953"
+  },
+  {
+    "domain": "google-test.mps-tis.com",
+    "approve": null,
+    "flagged_on": "2026-03-18T08:05:37.137954"
+  },
+  {
+    "domain": "local-test.mps-tis.com",
+    "approve": null,
+    "flagged_on": "2026-03-18T08:05:37.137955"
+  },
+  {
+    "domain": "stable.mps-tis.com",
+    "approve": null,
+    "flagged_on": "2026-03-18T08:05:37.137959"
   }
 ]
