@@ -1,0 +1,68 @@
+[
+  {
+    "domain": "a1.mps-tis.com",
+    "dns": {
+      "status": true,
+      "type": "A",
+      "value": [
+        "1.1.1.1"
+      ],
+      "resolver": "8.8.8.8"
+    },
+    "port": {
+      "status": true,
+      "ports": {
+        "80": "open",
+        "443": "open"
+      }
+    },
+    "http": {
+      "status": false,
+      "url": null,
+      "status_code": null,
+      "error": "SSL Error: HTTPSConnectionPool(host='a1.mps-tis.com', port=443): Max retries exceeded with url: / (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'a1.mps-tis.com'. (_ssl.c:1016)\")))"
+    },
+    "crawl": {
+      "status": false,
+      "reason": "HTTP 409"
+    },
+    "failure_reason": [
+      "HTTP",
+      "CRAWL"
+    ],
+    "final_status": "failed"
+  },
+  {
+    "domain": "app2.mps-tis.com",
+    "dns": {
+      "status": true,
+      "type": "A",
+      "value": [
+        "142.250.183.206"
+      ],
+      "resolver": "8.8.8.8"
+    },
+    "port": {
+      "status": true,
+      "ports": {
+        "80": "open",
+        "443": "open"
+      }
+    },
+    "http": {
+      "status": false,
+      "url": null,
+      "status_code": null,
+      "error": "SSL Error: HTTPSConnectionPool(host='app2.mps-tis.com', port=443): Max retries exceeded with url: / (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'app2.mps-tis.com'. (_ssl.c:1016)\")))"
+    },
+    "crawl": {
+      "status": false,
+      "reason": "HTTP 404"
+    },
+    "failure_reason": [
+      "HTTP",
+      "CRAWL"
+    ],
+    "final_status": "failed"
+  }
+]
